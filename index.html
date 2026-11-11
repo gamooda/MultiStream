@@ -681,7 +681,8 @@ addBox(group,.39,.10,.03,trim,1.88,2.16,.73,false,false);
 addBox(group,.39,.10,.03,trim,1.88,1.00,.73,false,false);
 const knobMat=new THREE.MeshStandardMaterial({color:0x37333a,roughness:.28,metalness:.78});
 [1.88,1.53,1.18].forEach((y,index)=>{
-const knob=new THREE.Mesh(new THREE.CylinderGeometry(index===0?.105:.075,index===0?.105:.075,.09,24),knobMat);
+const radius=index===0?.105:.075;
+const knob=new THREE.Mesh(new THREE.CylinderGeometry(radius,radius,.09,24),knobMat);
 knob.rotation.x=Math.PI/2;
 knob.position.set(1.88,y,.76);
 knob.castShadow=false;
@@ -760,9 +761,7 @@ controlsCssObj.position.set(2.40,1.60,1.13);
 controlsCssObj.scale.set(.0075,.0075,.0075);
 controlsCssObj.visible=false;
 group.add(cssObj,chatCssObj,controlsCssObj);
-const tvObj={
-group,cssObj,chatCssObj,controlsCssObj,screenWrapper,playerMount,iframe:null,twitchEmbed:null,twitchPlayer:null,playerKey:'',playerMuted:null,placeholder,controlsBar,focusBtn,chatBtn,closeBtn,chatWrapper,chatIframe,chatTitle,chatCloseBtn,entry:null,source:'',chatSource:'',isChatOpen:false,hitArea:null,selectMeshes:[],highlightMaterials:[],baseScale:1,isHovered:false,loadToken:0,playerLoaded:false
-};
+const tvObj={group,cssObj,chatCssObj,controlsCssObj,screenWrapper,playerMount,iframe:null,twitchEmbed:null,twitchPlayer:null,playerKey:'',playerMuted:null,placeholder,controlsBar,focusBtn,chatBtn,closeBtn,chatWrapper,chatIframe,chatTitle,chatCloseBtn,entry:null,source:'',chatSource:'',isChatOpen:false,hitArea:null,selectMeshes:[],highlightMaterials:[],baseScale:1,isHovered:false,loadToken:0,playerLoaded:false};
 createTVModel(group,tvObj);
 const enter=()=>{if(tvObj.entry&&view3D.style.display==='block')setHoveredTV(tvObj);};
 const leave=()=>scheduleHoverClear();
@@ -817,17 +816,12 @@ tvObj.playerMuted=null;
 function startTwitchPlayback(player,isValid,unmuteAfterStart){
 if(!player)return;
 let playbackStarted=false;
-let playingListener=null;
 const unmute=()=>{
 if(!unmuteAfterStart||isMutedAll||!isValid())return;
 try{player.setMuted(false);}catch(e){}
 };
 if(typeof Twitch!=='undefined'&&Twitch.Player&&Twitch.Player.PLAYING&&typeof player.addEventListener==='function'){
-playingListener=()=>{
-playbackStarted=true;
-unmute();
-};
-try{player.addEventListener(Twitch.Player.PLAYING,playingListener);}catch(e){}
+try{player.addEventListener(Twitch.Player.PLAYING,()=>{playbackStarted=true;unmute();});}catch(e){}
 }
 const attempt=()=>{
 if(!isValid())return;
@@ -909,15 +903,7 @@ tvObj.iframe=iframe;
 loadTVIframeWhenConnected(tvObj,entry,iframe);
 return;
 }
-const embed=new Twitch.Embed(mount.id,{
-width:562,
-height:322,
-channel:entry.channel,
-parent:getParentDomains(),
-layout:'video',
-muted:true,
-autoplay:true
-});
+const embed=new Twitch.Embed(mount.id,{width:562,height:322,channel:entry.channel,parent:getParentDomains(),layout:'video',muted:true,autoplay:true});
 tvObj.twitchEmbed=embed;
 embed.addEventListener(Twitch.Embed.VIDEO_READY,function(){
 if(tvObj.entry!==entry||tvObj.twitchEmbed!==embed||view3D.style.display!=='block'||!players.includes(entry))return;
@@ -1030,9 +1016,7 @@ scene.add(tvGroup);
 ensureTVPool(1);
 }
 function getLayout(count){
-if(count<=0){
-return{items:[],target:new THREE.Vector3(0,1.65,0),rows:1,cols:1,width:5.4,height:4.2,depth:4.2};
-}
+if(count<=0)return{items:[],target:new THREE.Vector3(0,1.65,0),rows:1,cols:1,width:5.4,height:4.2,depth:4.2};
 const cols=count<=3?count:count===4?2:count<=6?3:4;
 const rows=Math.ceil(count/cols);
 const scale=count===1?1.12:count<=3?1:count<=6?.94:Math.max(.60,.86-Math.max(0,count-8)*.022);
@@ -1062,14 +1046,7 @@ safeTarget.z=THREE.MathUtils.clamp(safeTarget.z,-45,8);
 safePosition.x=THREE.MathUtils.clamp(safePosition.x,-32,32);
 safePosition.y=THREE.MathUtils.clamp(safePosition.y,1.5,48);
 safePosition.z=THREE.MathUtils.clamp(safePosition.z,-42,30);
-cameraTween={
-startPosition:camera.position.clone(),
-startTarget:controls.target.clone(),
-endPosition:safePosition,
-endTarget:safeTarget,
-startTime:performance.now(),
-duration
-};
+cameraTween={startPosition:camera.position.clone(),startTarget:controls.target.clone(),endPosition:safePosition,endTarget:safeTarget,startTime:performance.now(),duration};
 requestRender3D();
 }
 function updateCameraTween(){
@@ -1180,8 +1157,7 @@ tv.chatBtn.style.display=tv===focusedTV?'flex':'none';
 tv.focusBtn.classList.toggle('is-active',tv===focusedTV);
 tv.focusBtn.textContent=tv===focusedTV?'← ОБЩИЙ ВИД':'↗ ПРИБЛИЗИТЬ';
 tv.focusBtn.title=tv===focusedTV?'Вернуться к общему виду':'Приблизить телевизор';
-if(tv.group&&tv.group.position.x>0)tv.controlsCssObj.position.x=-2.42;
-else tv.controlsCssObj.position.x=2.42;
+tv.controlsCssObj.position.x=tv.group&&tv.group.position.x>0?-2.42:2.42;
 });
 requestRender3D();
 }
@@ -1487,16 +1463,14 @@ let roomMetaData={};
 let roomInitialStateApplied=false;
 let applyingRemoteRoomState=false;
 let roomPublishTimer=null;
-let roomClientId=typeof crypto!=='undefined'&&crypto.randomUUID?crypto.randomUUID():Math.random().toString(36).slice(2)+Date.now().toString(36);
+const roomClientId=typeof crypto!=='undefined'&&crypto.randomUUID?crypto.randomUUID():Math.random().toString(36).slice(2)+Date.now().toString(36);
 try{
 if(typeof firebase!=='undefined'){
 roomApp=firebase.apps.length?firebase.app():firebase.initializeApp(firebaseConfig);
 roomAuth=roomApp.auth();
 roomDatabase=roomApp.database();
 }
-}catch(e){
-console.error(e);
-}
+}catch(e){console.error(e);}
 function isRoomOwner(){return roomRole==='owner';}
 function isRoomViewer(){return roomRole==='viewer';}
 function openRoomDialog(){
@@ -1566,7 +1540,7 @@ updateRoomBadge();
 function setRoomUI(){
 document.body.classList.toggle('room-viewer',isRoomViewer());
 document.body.classList.toggle('room-owner',isRoomOwner());
-if(mainLogo)mainLogo.style.pointerEvents=isRoomViewer()?'none':'';
+mainLogo.style.pointerEvents=isRoomViewer()?'none':'';
 if(renderer)renderer.domElement.style.pointerEvents=isRoomViewer()?'none':'auto';
 if(isRoomViewer()){
 headerToggle.style.display='none';
@@ -1718,9 +1692,7 @@ return connectionRef.set(true);
 console.error(error);
 roomPresenceConnectionRef=null;
 });
-}else{
-roomPresenceConnectionRef=null;
-}
+}else roomPresenceConnectionRef=null;
 };
 roomPresenceInfoRef.on('value',roomPresenceHandler);
 }
@@ -1824,11 +1796,7 @@ if(!existing.exists())break;
 id='';
 }
 if(!id)throw new Error('Не удалось создать уникальную ссылку');
-await metaRef.set({
-ownerUid:roomCurrentUser.uid,
-title,
-createdAt:Date.now()
-});
+await metaRef.set({ownerUid:roomCurrentUser.uid,title,createdAt:Date.now()});
 const stateRef=roomDatabase.ref(`rooms/${id}/state`);
 await stateRef.set(getLocalRoomState());
 const connected=await connectToRoom(id);
@@ -1861,7 +1829,6 @@ roomExitButton.disabled=false;
 }
 function leaveRoom(updateUrl=true){
 if(!roomId)return;
-const oldId=roomId;
 if(roomPublishTimer){clearTimeout(roomPublishTimer);roomPublishTimer=null;}
 if(roomMetaRef&&roomMetaListener)roomMetaRef.off('value',roomMetaListener);
 if(roomStateRef&&roomStateListener)roomStateRef.off('value',roomStateListener);
@@ -1905,12 +1872,8 @@ area.style.position='fixed';
 area.style.opacity='0';
 document.body.appendChild(area);
 area.select();
-try{
-document.execCommand('copy');
-showToast('Ссылка комнаты скопирована');
-}catch(e){
-showToast('Не удалось скопировать ссылку');
-}
+try{document.execCommand('copy');showToast('Ссылка комнаты скопирована');}
+catch(e){showToast('Не удалось скопировать ссылку');}
 area.remove();
 }
 function initializeRoomSystem(){
@@ -1931,21 +1894,9 @@ showToast('Не удалось войти в Firebase. Проверь Anonymous 
 }
 });
 }
-function wrapRoomPublisher(name){
-const original=window[name];
-if(typeof original!=='function')return;
-window[name]=function(...args){
-const result=original.apply(this,args);
-publishRoomState();
-return result;
-};
-}
 const originalUpdateUrlFromPlayers=updateUrlFromPlayers;
 updateUrlFromPlayers=function(){
-if(roomId){
-updateRoomUrl();
-return;
-}
+if(roomId){updateRoomUrl();return;}
 originalUpdateUrlFromPlayers();
 };
 const originalAddStreamByParsed=addStreamByParsed;
@@ -2075,6 +2026,7 @@ if(entry.type==='twitch'&&entry.player&&!isMutedAll){
 try{entry.player.play();}catch(e){}
 }
 });
+}
 },{once:true});
 updateHeaderHeight();
 init3D();
